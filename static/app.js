@@ -37,6 +37,7 @@ function verified() {
 const state = {
   screen: "landing", // landing | form | loading | results
   mode: null, // operator | scout
+  step: 0,
   answers: {},
   result: null,
   error: null,
@@ -85,7 +86,7 @@ function landing() {
   const cards = Object.entries(MODES).map(([key, m]) =>
     h(
       "button",
-      { class: "mode-card", onclick: () => go("form", { mode: key, answers: {} }) },
+      { class: "mode-card", onclick: () => go("form", { mode: key, answers: {}, step: 0 }) },
       h(
         "div",
         { class: "who" },
@@ -124,6 +125,145 @@ function landing() {
   ];
 }
 
+/* ---------- form engine ---------- */
+
+function stepFields(mode, step) {
+  return FORMS[mode].steps[step].fields;
+}
+
+function stepIsSatisfied(mode, step) {
+  return stepFields(mode, step)
+    .filter((f) => f.required)
+    .every((f) => (state.answers[f.k] || "").trim().length > 0);
+}
+
+function fieldNode(f) {
+  const id = "f_" + f.k;
+  const value = state.answers[f.k] || "";
+  const common = {
+    id,
+    name: f.k,
+    placeholder: f.ph || "",
+    oninput: (e) => {
+      state.answers[f.k] = e.target.value;
+      if (f.required) refreshNav();
+    },
+  };
+
+  let input;
+  if (f.type === "textarea") {
+    input = h("textarea", { ...common, rows: 3 }, value);
+  } else if (f.type === "select") {
+    input = h(
+      "select",
+      {
+        ...common,
+        onchange: (e) => {
+          state.answers[f.k] = e.target.value;
+          if (f.required) refreshNav();
+        },
+      },
+      f.options.map((o) =>
+        h("option", { value: o, selected: o === value || null }, o || "—")
+      )
+    );
+  } else {
+    input = h("input", { ...common, type: "text", value, autocomplete: "off" });
+  }
+
+  return h(
+    "div",
+    { class: "field" },
+    h(
+      "label",
+      { for: id },
+      f.label,
+      !f.required && h("span", { class: "optional" }, "  optional")
+    ),
+    f.hint && h("span", { class: "hint" }, f.hint),
+    input
+  );
+}
+
+function refreshNav() {
+  const btn = document.getElementById("next-btn");
+  if (btn) btn.disabled = !stepIsSatisfied(state.mode, state.step);
+}
+
+function advance() {
+  if (!stepIsSatisfied(state.mode, state.step)) return;
+  const last = FORMS[state.mode].steps.length - 1;
+  if (state.step < last) go("form", { step: state.step + 1 });
+  else submit();
+}
+
+function retreat() {
+  if (state.step > 0) go("form", { step: state.step - 1 });
+  else go("landing", { mode: null, step: 0 });
+}
+
+function formScreen() {
+  const mode = MODES[state.mode];
+  const form = FORMS[state.mode];
+  const step = form.steps[state.step];
+  const last = state.step === form.steps.length - 1;
+
+  const dots = form.steps.map((_, i) =>
+    h("div", { class: "dot" + (i <= state.step ? " done" : "") })
+  );
+
+  return [
+    topbar(mode.name, "Step " + (state.step + 1) + " of " + form.steps.length, retreat),
+    h("div", { class: "progress" }, dots),
+    h(
+      "div",
+      { class: "step-head" },
+      h("h2", {}, step.title),
+      h("p", {}, step.blurb)
+    ),
+    h(
+      "form",
+      {
+        class: "fields",
+        onsubmit: (e) => {
+          e.preventDefault();
+          advance();
+        },
+        onkeydown: (e) => {
+          if (e.key !== "Enter") return;
+          const isTextarea = e.target.tagName === "TEXTAREA";
+          if (isTextarea && !(e.metaKey || e.ctrlKey)) return;
+          e.preventDefault();
+          advance();
+        },
+      },
+      step.fields.map(fieldNode),
+      h("button", { type: "submit", style: "display:none" })
+    ),
+    h(
+      "div",
+      { class: "step-nav" },
+      h("button", { class: "btn btn-ghost", onclick: retreat }, state.step === 0 ? "Back out" : "Back"),
+      h("span", { class: "spacer" }),
+      h("span", { class: "keyhint" }, last ? "⌘↩ to submit" : "↩ for next"),
+      h(
+        "button",
+        {
+          id: "next-btn",
+          class: "btn btn-primary",
+          disabled: !stepIsSatisfied(state.mode, state.step) || null,
+          onclick: advance,
+        },
+        last ? form.submitLabel : "Next"
+      )
+    ),
+  ];
+}
+
+function submit() {
+  go("loading");
+}
+
 /* ---------- render ---------- */
 
 function render() {
@@ -132,6 +272,9 @@ function render() {
   switch (state.screen) {
     case "landing":
       nodes = landing();
+      break;
+    case "form":
+      nodes = formScreen();
       break;
     default:
       nodes = landing();
