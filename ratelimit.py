@@ -30,7 +30,10 @@ CREATE TABLE IF NOT EXISTS free_usage (
 CREATE INDEX IF NOT EXISTS free_usage_day ON free_usage (day, ip);
 """
 
-PER_IP_DEFAULT = 5
+# 50 free runs per caller per day. At roughly $0.12 a run that is about $6/day
+# of exposure to a single determined caller, which the global cap then bounds
+# across all of them.
+PER_IP_DEFAULT = 50
 GLOBAL_DEFAULT = 200
 
 

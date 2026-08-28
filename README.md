@@ -126,7 +126,7 @@ broken or removed entirely. There are tests that assert exactly that.
 | Variable | Default | What it does |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | Required to run any evaluation. |
-| `SCOUT_RATE_LIMIT` | `5` | Free Scout runs per IP per day. `0` disables. |
+| `SCOUT_RATE_LIMIT` | `50` | Free Scout runs per IP per day. `0` disables. |
 | `SCOUT_DAILY_CAP` | `200` | Free Scout runs per day in total. `0` disables. |
 | `TRUST_PROXY` | unset | Set to `1` when behind a proxy so `X-Forwarded-For` is used for rate limiting. Leave unset locally — the header is caller-supplied and spoofable when nothing sets it. |
 

@@ -5,6 +5,7 @@ be the reason a free evaluation fails when something else has gone wrong.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -122,3 +123,15 @@ def test_forwarded_headers_are_only_trusted_when_configured(monkeypatch):
 
     monkeypatch.setenv("TRUST_PROXY", "1")
     assert ratelimit.client_ip(FakeRequest()) == "1.2.3.4"
+
+
+def test_defaults_match_what_the_readme_advertises(monkeypatch):
+    """Keeps the documented numbers and the real ones from drifting apart."""
+    for var in ("SCOUT_RATE_LIMIT", "SCOUT_DAILY_CAP"):
+        monkeypatch.delenv(var, raising=False)
+    assert ratelimit.per_ip_limit() == 50
+    assert ratelimit.global_limit() == 200
+
+    readme = (Path(__file__).parent.parent / "README.md").read_text()
+    assert "| `SCOUT_RATE_LIMIT` | `50` |" in readme
+    assert "| `SCOUT_DAILY_CAP` | `200` |" in readme
