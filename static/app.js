@@ -47,44 +47,7 @@ const state = {
 
 function go(screen, patch) {
   Object.assign(state, patch || {}, { screen });
-  /* ---------- boot & routing ---------- */
-
-async function openResult(id) {
-  const response = await fetch("/api/result/" + id);
-  if (!response.ok) return;
-  history.pushState({}, "", "/r/" + id);
-  go("results", { result: await response.json() });
-}
-
-async function loadHistory() {
-  try {
-    state.history = await (await fetch("/api/history")).json();
-  } catch (e) {
-    state.history = [];
-  }
-}
-
-function routeFromPath() {
-  const match = window.location.pathname.match(/^\/r\/([a-z0-9]+)$/i);
-  if (match) return openResult(match[1]);
-  go("landing", { result: null, mode: null });
-}
-
-window.addEventListener("popstate", routeFromPath);
-
-async function boot() {
-  try {
-    FORMS = await (await fetch("/api/forms")).json();
-  } catch (e) {
-    return app.replaceChildren(
-      h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
-    );
-  }
-  await loadHistory();
-  routeFromPath();
-}
-
-boot();
+  render();
 }
 
 let FORMS = null; // fetched from /api/forms at boot
