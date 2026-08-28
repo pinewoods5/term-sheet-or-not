@@ -40,24 +40,51 @@ const state = {
   step: 0,
   answers: {},
   result: null,
+  status: null,
   error: null,
+  history: [],
 };
 
 function go(screen, patch) {
   Object.assign(state, patch || {}, { screen });
-  /* ---------- boot ---------- */
+  /* ---------- boot & routing ---------- */
 
-fetch("/api/forms")
-  .then((r) => r.json())
-  .then((f) => {
-    FORMS = f;
-    render();
-  })
-  .catch(() => {
-    app.replaceChildren(
+async function openResult(id) {
+  const response = await fetch("/api/result/" + id);
+  if (!response.ok) return;
+  history.pushState({}, "", "/r/" + id);
+  go("results", { result: await response.json() });
+}
+
+async function loadHistory() {
+  try {
+    state.history = await (await fetch("/api/history")).json();
+  } catch (e) {
+    state.history = [];
+  }
+}
+
+function routeFromPath() {
+  const match = window.location.pathname.match(/^\/r\/([a-z0-9]+)$/i);
+  if (match) return openResult(match[1]);
+  go("landing", { result: null, mode: null });
+}
+
+window.addEventListener("popstate", routeFromPath);
+
+async function boot() {
+  try {
+    FORMS = await (await fetch("/api/forms")).json();
+  } catch (e) {
+    return app.replaceChildren(
       h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
     );
-  });
+  }
+  await loadHistory();
+  routeFromPath();
+}
+
+boot();
 }
 
 let FORMS = null; // fetched from /api/forms at boot
@@ -134,7 +161,21 @@ function landing() {
       "section",
       { class: "section" },
       h("p", { class: "section-label" }, "Recent verdicts"),
-      h("p", { class: "empty" }, "Nothing yet. Go get told.")
+      state.history.length
+        ? state.history.map((row) =>
+            h(
+              "button",
+              { class: "history-item", onclick: () => openResult(row.id) },
+              h("div", { class: "avatar" }, MODES[row.mode].emoji),
+              h(
+                "div",
+                {},
+                h("div", { class: "h-name" }, row.subject),
+                h("div", { class: "h-meta" }, row.tier + " · " + row.overall + "/100 · " + shortTime(row.created_at))
+              )
+            )
+          )
+        : h("p", { class: "empty" }, "Nothing yet. Go get told."),
     ),
   ];
 }
@@ -274,8 +315,319 @@ function formScreen() {
   ];
 }
 
-function submit() {
-  go("loading");
+/* ---------- submitting ---------- */
+
+async function submit() {
+  go("loading", { status: "Sending this to someone who won't be kind.", error: null });
+
+  let response;
+  try {
+    response = await fetch("/api/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: state.mode, answers: state.answers }),
+    });
+  } catch (e) {
+    return go("loading", { error: "Couldn't reach the server." });
+  }
+
+  if (!response.ok || !response.body) {
+    const detail = await response.text().catch(() => "");
+    return go("loading", { error: detail || "The server refused that submission." });
+  }
+
+  // Minimal SSE reader. EventSource can't POST, and the submission is too big
+  // to sit in a query string, so we parse the stream ourselves.
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let split;
+    while ((split = buffer.indexOf("\n\n")) !== -1) {
+      const chunk = buffer.slice(0, split);
+      buffer = buffer.slice(split + 2);
+
+      const event = (chunk.match(/^event: (.*)$/m) || [])[1];
+      const dataLine = (chunk.match(/^data: (.*)$/m) || [])[1];
+      if (!event || !dataLine) continue;
+      const data = JSON.parse(dataLine);
+
+      if (event === "status") go("loading", { status: data.text });
+      else if (event === "error") go("loading", { error: data.message });
+      else if (event === "result") {
+        history.pushState({}, "", "/r/" + data.id);
+        return go("results", { result: data });
+      }
+    }
+  }
+
+  if (state.screen === "loading" && !state.error) {
+    go("loading", { error: "The stream ended without a verdict. Try again." });
+  }
+}
+
+function loadingScreen() {
+  if (state.error) {
+    return [
+      topbar(MODES[state.mode] ? MODES[state.mode].name : "Term Sheet or Not", null, () =>
+        go("form", { error: null })
+      ),
+      h(
+        "div",
+        { class: "loading" },
+        h("p", { class: "status" }, "That didn't work."),
+        h("p", { class: "sub" }, state.error),
+        h(
+          "div",
+          { class: "actions" },
+          h("button", { class: "btn btn-primary", onclick: submit }, "Try again"),
+          h("button", { class: "btn", onclick: () => go("form", { error: null }) }, "Edit answers")
+        )
+      ),
+    ];
+  }
+
+  return [
+    topbar(MODES[state.mode].name, "Evaluating"),
+    h(
+      "div",
+      { class: "loading" },
+      h("div", { class: "spinner" }),
+      h("p", { class: "status" }, state.status || "Thinking."),
+      h("p", { class: "sub" }, "This takes 30-60 seconds. It's reading the market, not stalling.")
+    ),
+  ];
+}
+
+/* ---------- results ---------- */
+
+function scoreClass(score) {
+  if (score >= 8) return "score-pill score-good";
+  if (score <= 3) return "score-pill score-bad";
+  return "score-pill score-mid";
+}
+
+function shortTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function postHead(mode, time) {
+  return h(
+    "div",
+    { class: "post-head" },
+    h("span", { class: "name" }, mode.name),
+    verified(),
+    h("span", { class: "handle" }, "@" + mode.handle),
+    time && h("span", { class: "time" }, "· " + shortTime(time))
+  );
+}
+
+function toast(message) {
+  const node = h("div", { class: "toast" }, message);
+  document.body.append(node);
+  setTimeout(() => node.remove(), 1800);
+}
+
+function engageRow(result) {
+  return h(
+    "div",
+    { class: "engage" },
+    h(
+      "button",
+      {
+        onclick: () => document.getElementById("fix-first").scrollIntoView({ behavior: "smooth" }),
+        title: "Jump to what to fix",
+      },
+      "↩ fix this first"
+    ),
+    h("button", { onclick: rerun, title: "Edit your answers and run it again" }, "↻ re-run"),
+    h("button", { disabled: true }, "♡ " + result.overall_score + "/100"),
+    h(
+      "button",
+      {
+        onclick: () => {
+          navigator.clipboard.writeText(window.location.href);
+          toast("Link copied");
+        },
+      },
+      "↗ copy link"
+    )
+  );
+}
+
+function rerun() {
+  go("form", { mode: state.result.mode, answers: { ...state.result.answers }, step: 0 });
+  history.pushState({}, "", "/");
+}
+
+function verdictPost(result, mode) {
+  const tier = result.tier;
+  return [
+    h("div", { class: "pin-label" }, "📌 Pinned verdict"),
+    h(
+      "article",
+      { class: "post" },
+      h("div", { class: "rail" }, h("div", { class: "avatar" }, mode.emoji), h("div", { class: "line" })),
+      h(
+        "div",
+        { class: "post-body" },
+        postHead(mode, result.created_at),
+        h(
+          "div",
+          { class: "verdict tone-" + tier.tone },
+          h("p", { class: "tier" }, tier.label),
+          h("p", { class: "score" }, result.overall_score + " / 100 — weighted across " + result.categories.length + " categories"),
+          h("p", { class: "blurb" }, tier.blurb)
+        ),
+        h("p", { class: "headline" }, result.headline),
+        h("p", {}, result.thesis),
+        engageRow(result)
+      )
+    ),
+  ];
+}
+
+function categoryPost(category, mode) {
+  return h(
+    "article",
+    { class: "post" },
+    h(
+      "div",
+      { class: "rail" },
+      h("div", { class: "avatar" }, mode.emoji),
+      h("div", { class: "line" })
+    ),
+    h(
+      "div",
+      { class: "post-body" },
+      postHead(mode),
+      h(
+        "div",
+        { class: "cat-head" },
+        h("span", { class: "label" }, category.label),
+        h("span", { class: scoreClass(category.score) }, category.score + "/10"),
+        h("span", { class: "weight" }, Math.round(category.weight * 100) + "% of the score")
+      ),
+      h("p", { class: "cat-verdict" }, category.verdict),
+      h("p", {}, category.reasoning)
+    )
+  );
+}
+
+function flagList(items, kind) {
+  return h(
+    "ul",
+    { class: "flags " + (kind === "good" ? "good" : "bad") },
+    items.map((item) =>
+      h("li", {}, h("span", { class: "mark" }, kind === "good" ? "+" : "−"), h("span", {}, item))
+    )
+  );
+}
+
+function resultsScreen() {
+  const result = state.result;
+  const mode = MODES[result.mode];
+  const subject =
+    (result.answers && (result.answers.company_name || result.answers.idea_one_liner)) || "";
+
+  const nodes = [
+    topbar(mode.name, subject, () => {
+      history.pushState({}, "", "/");
+      go("landing", { result: null, mode: null });
+    }),
+    ...verdictPost(result, mode),
+    ...result.categories.map((c) => categoryPost(c, mode)),
+    h(
+      "section",
+      { class: "section", id: "fix-first" },
+      h("p", { class: "section-label" }, "Fix this first"),
+      result.fix_this_first.map((fix) =>
+        h(
+          "div",
+          { class: "fix" },
+          h("div", { class: "rank" }, "#" + fix.rank),
+          h("h3", {}, fix.title),
+          h("p", {}, fix.why),
+          h("p", { class: "do" }, h("strong", {}, "Do this: "), fix.do_this)
+        )
+      )
+    ),
+  ];
+
+  if (result.green_flags.length) {
+    nodes.push(
+      h(
+        "section",
+        { class: "section" },
+        h("p", { class: "section-label" }, "Working"),
+        flagList(result.green_flags, "good")
+      )
+    );
+  }
+
+  nodes.push(
+    h(
+      "section",
+      { class: "section" },
+      h("p", { class: "section-label" }, "Broken"),
+      flagList(result.red_flags, "bad")
+    ),
+    h(
+      "section",
+      { class: "section" },
+      h("p", { class: "section-label" }, "Strategic notes"),
+      result.strategic_notes.map((note) =>
+        h("div", { class: "note" }, h("h4", {}, note.title), h("p", {}, note.note))
+      )
+    )
+  );
+
+  if (result.research_notes.length) {
+    nodes.push(
+      h(
+        "section",
+        { class: "section" },
+        h("p", { class: "section-label" }, "What I found when I looked it up"),
+        result.research_notes.map((note) =>
+          h(
+            "div",
+            { class: "research" },
+            h("p", { class: "claim" }, "You said: " + note.claim),
+            h("p", { class: "finding" }, note.finding),
+            note.source_url &&
+              h("a", { href: note.source_url, target: "_blank", rel: "noreferrer noopener" }, note.source_url)
+          )
+        )
+      )
+    );
+  }
+
+  nodes.push(
+    h(
+      "div",
+      { class: "actions" },
+      h("button", { class: "btn", onclick: rerun }, "Edit answers & re-run"),
+      h(
+        "button",
+        {
+          class: "btn btn-primary",
+          onclick: () => {
+            history.pushState({}, "", "/");
+            go("landing", { result: null, mode: null });
+          },
+        },
+        "Judge something else"
+      )
+    )
+  );
+
+  return nodes;
 }
 
 /* ---------- render ---------- */
@@ -290,6 +642,12 @@ function render() {
     case "form":
       nodes = formScreen();
       break;
+    case "loading":
+      nodes = loadingScreen();
+      break;
+    case "results":
+      nodes = resultsScreen();
+      break;
     default:
       nodes = landing();
   }
@@ -297,16 +655,41 @@ function render() {
   window.scrollTo(0, 0);
 }
 
-/* ---------- boot ---------- */
+/* ---------- boot & routing ---------- */
 
-fetch("/api/forms")
-  .then((r) => r.json())
-  .then((f) => {
-    FORMS = f;
-    render();
-  })
-  .catch(() => {
-    app.replaceChildren(
+async function openResult(id) {
+  const response = await fetch("/api/result/" + id);
+  if (!response.ok) return;
+  history.pushState({}, "", "/r/" + id);
+  go("results", { result: await response.json() });
+}
+
+async function loadHistory() {
+  try {
+    state.history = await (await fetch("/api/history")).json();
+  } catch (e) {
+    state.history = [];
+  }
+}
+
+function routeFromPath() {
+  const match = window.location.pathname.match(/^\/r\/([a-z0-9]+)$/i);
+  if (match) return openResult(match[1]);
+  go("landing", { result: null, mode: null });
+}
+
+window.addEventListener("popstate", routeFromPath);
+
+async function boot() {
+  try {
+    FORMS = await (await fetch("/api/forms")).json();
+  } catch (e) {
+    return app.replaceChildren(
       h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
     );
-  });
+  }
+  await loadHistory();
+  routeFromPath();
+}
+
+boot();
