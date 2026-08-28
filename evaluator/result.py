@@ -40,6 +40,6 @@ def build(mode: str, data: dict, answers: dict) -> dict:
         "strategic_notes": data["strategic_notes"],
         "green_flags": data["green_flags"],
         "red_flags": data["red_flags"],
-        "research_notes": data["research_notes"],
+        "research_notes": data.get("research_notes", []),
         "answers": answers,
     }

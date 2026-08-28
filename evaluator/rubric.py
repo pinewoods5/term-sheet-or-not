@@ -19,6 +19,17 @@ from dataclasses import dataclass
 MODES = ("operator", "scout")
 
 
+def searches_web(mode: str) -> bool:
+    """Whether this mode gets a live web-search tool.
+
+    Only The Operator does. The Scout reasons from what the founder typed plus
+    its own training knowledge, so anything that would imply it checked a claim
+    against the live web -- the tool itself, the `research_notes` field, the
+    prompt's research directive, the loading copy -- keys off this.
+    """
+    return mode == "operator"
+
+
 @dataclass(frozen=True)
 class Category:
     key: str

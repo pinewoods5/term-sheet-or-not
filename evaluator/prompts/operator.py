@@ -34,21 +34,31 @@ directly and it almost certainly belongs in `fix_this_first`:
   Use your search to find out which, and say which.\
 """
 
-RESEARCH = """\
-Before you score, use web search. You have it for a reason.
+EVIDENCE_POLICY = """\
+Before you score, use web search.
 
-Priorities, in order:
-1. Their competitive claim. If they named competitors, check whether those are
-   the real ones. If they said there are none, go find them. Naming three
-   funded companies doing this is the single most useful thing you can tell a
-   founder who thinks the space is empty.
-2. Their market and why-now claim. Is the window they're describing real, and
-   is it opening or closing?
-3. Their own footprint. If they claimed press, an audience, or a viral moment,
-   see whether it's there.
+You have a budget of THREE searches. That is enough if you spend them
+deliberately and not enough if you explore, so decide what each one is for
+before you run it. Use all three; an unused search is a finding you didn't make.
 
-Put what you find in `research_notes` with real URLs from the results you
-actually saw. Fold the findings into your scoring -- a founder who missed three
-funded competitors has a Market & Moat problem whatever they wrote in the box.
-Do not put a URL in `research_notes` that did not come from a search result.\
+Spend them here, in this order:
+
+1. THEIR COMPETITIVE CLAIM. If they named competitors, check whether those are
+   the real ones. If they said there are none, go find them. Naming funded
+   companies doing this is the single most useful thing you can tell a founder
+   who thinks the space is empty, which is why it goes first.
+2. THEIR WHY-NOW AND MARKET CLAIM. Is the window they're describing real, and is
+   it opening or closing? A why-now that was equally true three years ago isn't
+   timing, it's availability.
+3. THEIR TAM NUMBER. Where did it come from, and does it survive contact with
+   the source? A headline market figure usually measures something adjacent to
+   what the founder is actually selling.
+
+Put what you find in `research_notes` with real URLs from results you actually
+saw. Fold the findings into your scoring -- a founder who missed three funded
+competitors has a Market & Moat problem whatever they wrote in the box. Never
+put a URL in `research_notes` that did not come from a search result.
+
+Field rule for `research_notes`: what you found when you searched, real URLs
+only. This is where you name the competitors they said didn't exist.\
 """

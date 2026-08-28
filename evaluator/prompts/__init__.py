@@ -2,7 +2,7 @@
 
 Both are built from the same parts in the same order -- shared style guide,
 mode mandate, the rubric with its scoring anchors, the hard gates, the
-research directive, and the output contract. Only the middle blocks differ,
+evidence policy, and the output contract. Only the middle blocks differ,
 which is what keeps the two evaluators sounding like colleagues rather than
 two unrelated apps.
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 
-from ..rubric import CATEGORIES, TIERS
+from ..rubric import CATEGORIES, TIERS, searches_web
 from . import operator, scout
 from .style_guide import style_block
 
@@ -80,7 +80,7 @@ def system_prompt(mode: str) -> str:
             style_block(),
             _rubric_block(mode),
             blocks.HARD_GATES,
-            blocks.RESEARCH,
+            blocks.EVIDENCE_POLICY,
             _tiers_block(),
             _OUTPUT_CONTRACT,
         ]
@@ -103,10 +103,19 @@ def user_message(mode: str, answers: dict[str, str]) -> str:
             lines.append(f"- {field['label']}: {value if value else '(left blank)'}")
         lines.append("")
 
+    # The closing nudge differs by mode: telling the Scout to "search first"
+    # would be instructing it to do something it has no tool for.
+    closer = (
+        "Remember: search first, then score against the anchors, then write."
+        if searches_web(mode)
+        else "Remember: no lookups on this run. Reason from what they wrote, "
+        "score against the anchors, then write."
+    )
     return (
         "Here is the submission. Evaluate it.\n\n"
         + "\n".join(lines).rstrip()
-        + "\n\nRemember: search first, then score against the anchors, then write."
+        + "\n\n"
+        + closer
     )
 
 

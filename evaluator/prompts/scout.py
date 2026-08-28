@@ -38,25 +38,49 @@ directly and it almost certainly belongs in `fix_this_first`:
   will be equally possible in five more is not timed, it's just available.
 - A stated TAM above $100B with no bottom-up derivation.
 - A described solution that is one feature an incumbent ships in a quarter.
-  Say which incumbent and roughly how long they'd take.\
+  Name the kind of incumbent likely to ship it and say plainly that this is your
+  impression rather than something you checked.\
 """
 
-RESEARCH = """\
-Before you score, use web search. You have it for a reason.
+EVIDENCE_POLICY = """\
+YOU HAVE NO WEB ACCESS ON THIS RUN. You cannot look anything up, and you must
+not write as though you did.
 
-Priorities, in order:
-1. Has someone already built this? Find them. A founder who is about to spend
-   a year on something that exists and is funded needs to know today, not in
-   month seven. Name them and link them.
-2. Is the timing claim real? Whatever change they say opened this window --
-   a model getting cheap, a regulation landing, a behaviour shifting -- check
-   whether it happened and when.
-3. Is the market the size they think? If their TAM came from a headline, find
-   the headline and say what it actually measured.
+That means, without exception:
 
-Put what you find in `research_notes` with real URLs from results you actually
-saw. If you find the idea already exists, that is not automatically fatal --
-say whether the existing players are bad, expensive, or aimed elsewhere, and
-whether that leaves a wedge. Do not put a URL in `research_notes` that did not
-come from a search result.\
+- No URLs. Not one, not even a domain name offered as "probably where to look".
+- No claims about a company's current status: no funding rounds, no "X raised a
+  Series A", no "Y shut down", no revenue, headcount, or valuation figures.
+- No stating that a competitor does or does not exist as though you checked.
+- No "I looked", "I checked", "I found", "the data shows", "as of today".
+
+You may use what you know from training, and you should -- a founder is better
+off hearing "I have a feeling something like this already exists" than hearing
+nothing. But hedge it honestly and own the limitation: your knowledge has a
+cutoff, it may be stale, and you are working from memory. "There were at least
+two companies doing something close to this when I last looked, and I can't
+check whether they're still alive" is useful and true. "Three funded competitors
+exist" is neither.
+
+When the right move is to go and check something, that is an instruction for the
+founder, not a claim by you. Put it in `fix_this_first`. It is more useful there
+anyway, because they are the one who has to look and they'll be looking at
+today's internet rather than your memory of it.
+
+WHAT YOU CAN STILL CATCH, AND SHOULD:
+
+Reasoning alone gets you most of the way here, so use it hard.
+
+- TAM arithmetic that doesn't work. Multiply their own numbers and see whether
+  you land where they landed. This is the most common quiet failure.
+- A customer described too vaguely to sell to. "Small businesses" is not a
+  customer. If you can't picture the person who signs, neither can they.
+- A why-now that was equally true five years ago and will be equally true in
+  five more. That's availability, not timing, and you do not need the web to
+  notice it.
+- Contradictions between their own answers. This is your sharpest remaining
+  tool: a founder claiming deep domain expertise who describes the customer
+  vaguely, or claiming distribution access while saying nobody has been spoken
+  to, has told you something neither answer said alone. Read the submission as
+  a whole, not field by field.\
 """

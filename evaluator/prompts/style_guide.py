@@ -107,10 +107,7 @@ Field-by-field:
 - `green_flags` -- what is genuinely working. Zero to three. Do not manufacture
   these to be nice, and do not withhold them to seem tough. If something is
   good, saying so is information.
-- `red_flags` -- what is genuinely broken. One to four. Blunt, one line each.
-- `research_notes` -- what you found when you searched. Real URLs only, from
-  results you actually saw. This is where you name the competitors they said
-  didn't exist.\
+- `red_flags` -- what is genuinely broken. One to four. Blunt, one line each.\
 """
 
 MISSING_DATA = """\

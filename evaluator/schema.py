@@ -11,7 +11,14 @@ computed from the category scores in rubric.py.
 
 from __future__ import annotations
 
-from .rubric import CATEGORIES
+import re
+
+import json
+
+from .rubric import CATEGORIES, searches_web
+
+
+_URL = re.compile(r"https?://\S+")
 
 
 def _string(desc: str, max_len: int | None = None) -> dict:
@@ -81,8 +88,7 @@ def evaluation_schema(mode: str) -> dict:
         }
     )
 
-    return _obj(
-        {
+    props = {
             "mode": {"type": "string", "enum": [mode]},
             "headline": _string(
                 "The verdict as one line, under 140 characters. This is the pinned "
@@ -131,16 +137,23 @@ def evaluation_schema(mode: str) -> dict:
                 "items": _string("Something genuinely broken, stated plainly."),
                 "description": "Between 1 and 4. One blunt line each.",
             },
-            "research_notes": {
-                "type": "array",
-                "minItems": 0,
-                "maxItems": 5,
-                "items": research,
-                "description": "Up to 5. What web search turned up when you checked "
-                               "their claims. Empty only if you genuinely could not search.",
-            },
+    }
+
+    # Only the mode that actually has a web tool is asked for sources. Leaving
+    # this field in place for The Scout would be asking a model with no way to
+    # look anything up to produce URLs, which is a direct invitation to invent
+    # them -- the failure this whole split is meant to avoid.
+    if searches_web(mode):
+        props["research_notes"] = {
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 5,
+            "items": research,
+            "description": "Up to 5. What web search turned up when you checked "
+                           "their claims. Empty only if you genuinely could not search.",
         }
-    )
+
+    return _obj(props)
 
 
 def validate(mode: str, data: dict) -> dict:
@@ -185,8 +198,20 @@ def validate(mode: str, data: dict) -> dict:
     if sorted(f.get("rank") for f in fixes) != [1, 2, 3]:
         fail("fix_this_first ranks must be exactly 1, 2 and 3")
 
-    for field, low, high in (("strategic_notes", 2, 4), ("green_flags", 0, 3),
-                             ("red_flags", 1, 4), ("research_notes", 0, 5)):
+    ranges = [("strategic_notes", 2, 4), ("green_flags", 0, 3), ("red_flags", 1, 4)]
+    if searches_web(mode):
+        ranges.append(("research_notes", 0, 5))
+    else:
+        # A mode with no web tool citing sources has invented them. The prompt
+        # forbids it; this enforces it, because "don't make up URLs" is exactly
+        # the kind of instruction that holds until the one time it doesn't.
+        if "research_notes" in data:
+            fail(f"{mode} returned research_notes but has no web access")
+        url = _URL.search(json.dumps(data))
+        if url:
+            fail(f"{mode} has no web access but cited a URL: {url.group(0)}")
+
+    for field, low, high in ranges:
         value = data.get(field)
         if not isinstance(value, list) or not low <= len(value) <= high:
             fail(f"{field} must be a list of {low}-{high} items, got {value!r}")

@@ -362,7 +362,13 @@ function loadingScreen() {
       { class: "loading" },
       h("div", { class: "spinner" }),
       h("p", { class: "status" }, state.status || "Thinking."),
-      h("p", { class: "sub" }, "This takes 30-60 seconds. It's reading the market, not stalling.")
+      h(
+        "p",
+        { class: "sub" },
+        state.mode === "operator"
+          ? "This takes 30-60 seconds. It's reading the market, not stalling."
+          : "This takes 20-40 seconds. It's thinking, not stalling."
+      )
     ),
   ];
 }

@@ -5,12 +5,18 @@ worth knowing about:
 
 1. `output_config.format` pins the response to the JSON schema, so the final
    text block is guaranteed-valid JSON and the frontend never parses prose.
-2. `web_search` is a server-side tool -- it runs on Anthropic's infrastructure
-   inside the same turn, so there is no client-side tool loop here. It is what
-   lets the evaluator name real competitors instead of hand-waving.
-3. The whole thing is streamed. Search pushes a call to 30-60 seconds, which is
-   long enough to hit request timeouts and far too long to show a founder a
-   frozen button, so we stream and narrate what's happening as it happens.
+2. Only The Operator gets `web_search`. It is a server-side tool -- it runs on
+   Anthropic's infrastructure inside the same turn, so there is no client-side
+   tool loop here -- and it is what lets that mode name real competitors instead
+   of hand-waving. The Scout gets no tools at all: at idea stage there is
+   nothing to verify that reasoning can't reach, and search is the single
+   largest line item in the cost of a run ($10 per 1,000 searches on top of the
+   tokens the results inject), which is not what a free tier should be spending
+   its money on.
+3. The whole thing is streamed. Search pushes an Operator call to 30-60 seconds,
+   which is long enough to hit request timeouts and far too long to show a
+   founder a frozen button, so we stream and narrate what's happening as it
+   happens.
 """
 
 from __future__ import annotations
@@ -23,15 +29,20 @@ import anthropic
 
 from .prompts import system_prompt, user_message
 from .result import build
+from .rubric import searches_web
 from .schema import api_schema
 
 MODEL = "claude-opus-5"
 MAX_TOKENS = 32000
-MAX_SEARCHES = 6
+# Three searches, spent deliberately: competitors, the timing claim, the TAM
+# number. That is the whole list worth verifying, and the prompt names them in
+# priority order so the budget doesn't get burned exploring.
+MAX_SEARCHES = 3
 MAX_PAUSE_RESTARTS = 5
 
 # Narration for the wait. Written in the evaluator's voice because a spinner
 # that says "Loading..." would be the one part of the app with no personality.
+# Operator only -- the Scout never emits a search event.
 SEARCH_LINES = [
     "Looking up who else is already doing this…",
     "Checking whether that market number is real…",
@@ -53,7 +64,7 @@ def _client() -> anthropic.Anthropic:
 
 
 def _request_kwargs(mode: str, answers: dict) -> dict:
-    return {
+    kwargs = {
         "model": MODEL,
         "max_tokens": MAX_TOKENS,
         # The system prompt is identical for every evaluation in a mode, so it
@@ -70,9 +81,6 @@ def _request_kwargs(mode: str, answers: dict) -> dict:
             "effort": "high",
             "format": {"type": "json_schema", "schema": api_schema(mode)},
         },
-        "tools": [
-            {"type": "web_search_20260209", "name": "web_search", "max_uses": MAX_SEARCHES}
-        ],
         # A prompt this full of deliberately aggressive framing is exactly the
         # shape that can trip a safety classifier. Routing around a refusal
         # beats showing a founder a stack trace.
@@ -80,6 +88,16 @@ def _request_kwargs(mode: str, answers: dict) -> dict:
         "fallbacks": "default",
         "messages": [{"role": "user", "content": user_message(mode, answers)}],
     }
+
+    if searches_web(mode):
+        kwargs["tools"] = [
+            {"type": "web_search_20260209", "name": "web_search", "max_uses": MAX_SEARCHES}
+        ]
+
+    # For the Scout the key is absent entirely rather than an empty list: an
+    # empty tools array still tells the model it is in a tool-using context,
+    # which is exactly the impression this mode must not give.
+    return kwargs
 
 
 def _final_json(message) -> dict:
@@ -134,7 +152,8 @@ def evaluate(mode: str, answers: dict) -> Iterator[tuple[str, dict]]:
         return
 
     if final.stop_reason == "pause_turn":
-        yield "error", {"message": "The evaluation kept stalling on search. Try again."}
+        stalled = "kept stalling on search" if searches_web(mode) else "kept stalling"
+        yield "error", {"message": f"The evaluation {stalled}. Try again."}
         return
 
     try:
