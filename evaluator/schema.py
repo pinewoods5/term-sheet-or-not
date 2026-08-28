@@ -105,7 +105,7 @@ def evaluation_schema(mode: str) -> dict:
                 "minItems": 3,
                 "maxItems": 3,
                 "items": fix,
-                "description": "The three highest-leverage changes, ranked. Ranked by "
+                "description": "Exactly 3 entries with ranks 1, 2 and 3. Ranked by "
                                "impact per unit of effort, not by how bad they are.",
             },
             "strategic_notes": {
@@ -113,26 +113,31 @@ def evaluation_schema(mode: str) -> dict:
                 "minItems": 2,
                 "maxItems": 4,
                 "items": note,
+                "description": "Between 2 and 4 notes on what matters in twelve "
+                               "months rather than this week.",
             },
             "green_flags": {
                 "type": "array",
                 "minItems": 0,
                 "maxItems": 3,
                 "items": _string("Something genuinely working, stated plainly."),
+                "description": "Up to 3. Do not manufacture these to be nice, and do "
+                               "not withhold them to seem tough.",
             },
             "red_flags": {
                 "type": "array",
                 "minItems": 1,
                 "maxItems": 4,
                 "items": _string("Something genuinely broken, stated plainly."),
+                "description": "Between 1 and 4. One blunt line each.",
             },
             "research_notes": {
                 "type": "array",
                 "minItems": 0,
                 "maxItems": 5,
                 "items": research,
-                "description": "What web search turned up when you checked their claims. "
-                               "Empty only if you genuinely could not search.",
+                "description": "Up to 5. What web search turned up when you checked "
+                               "their claims. Empty only if you genuinely could not search.",
             },
         }
     )
@@ -191,3 +196,27 @@ def validate(mode: str, data: dict) -> dict:
 
 def scores_from(data: dict) -> dict[str, int]:
     return {c["key"]: c["score"] for c in data["categories"]}
+
+
+# Constraints the structured-outputs API does not accept. They stay in the
+# schema above because they document the contract and the tests assert against
+# them, but they are stripped before the schema goes over the wire -- validate()
+# below enforces every one of them on the way back instead.
+_UNSUPPORTED = (
+    "minimum", "maximum", "multipleOf",
+    "minLength", "maxLength", "pattern",
+    "minItems", "maxItems", "uniqueItems",
+)
+
+
+def api_schema(mode: str) -> dict:
+    """The schema as the Messages API will accept it."""
+
+    def strip(node):
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k not in _UNSUPPORTED}
+        if isinstance(node, list):
+            return [strip(v) for v in node]
+        return node
+
+    return strip(evaluation_schema(mode))

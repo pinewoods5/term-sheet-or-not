@@ -9,6 +9,7 @@ stream. Run with:
 from __future__ import annotations
 
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,6 +28,14 @@ STATIC_DIR = Path(__file__).parent / "static"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store.init()
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+        # Not fatal -- saved evaluations are still browsable without a key --
+        # but say it loudly at startup rather than at submit time.
+        print(
+            "\n  WARNING: ANTHROPIC_API_KEY is not set.\n"
+            "  Saved results will open, but no new evaluation can run.\n"
+            "  export ANTHROPIC_API_KEY=sk-ant-... and restart.\n"
+        )
     yield
 
 

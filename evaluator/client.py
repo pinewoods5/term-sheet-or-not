@@ -23,7 +23,7 @@ import anthropic
 
 from .prompts import system_prompt, user_message
 from .result import build
-from .schema import evaluation_schema
+from .schema import api_schema
 
 MODEL = "claude-opus-5"
 MAX_TOKENS = 32000
@@ -68,7 +68,7 @@ def _request_kwargs(mode: str, answers: dict) -> dict:
         "thinking": {"type": "adaptive"},
         "output_config": {
             "effort": "high",
-            "format": {"type": "json_schema", "schema": evaluation_schema(mode)},
+            "format": {"type": "json_schema", "schema": api_schema(mode)},
         },
         "tools": [
             {"type": "web_search_20260209", "name": "web_search", "max_uses": MAX_SEARCHES}

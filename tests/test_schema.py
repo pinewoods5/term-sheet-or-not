@@ -141,3 +141,32 @@ def test_user_message_marks_skipped_fields(mode):
     for step in forms.fields_for(mode):
         for field in step["fields"]:
             assert field["label"] in message
+
+
+@pytest.mark.parametrize("mode", rubric.MODES)
+def test_api_schema_drops_constraints_the_api_rejects(mode):
+    """Structured outputs rejects numeric and length constraints.
+
+    They stay in evaluation_schema() as documentation and are enforced by
+    validate() on the way back, but must not go over the wire.
+    """
+    banned = {"minimum", "maximum", "multipleOf", "minLength", "maxLength",
+              "pattern", "minItems", "maxItems", "uniqueItems"}
+
+    def walk(node, path="$"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                assert key not in banned, f"{path} still carries {key}"
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, list):
+            for i, value in enumerate(node):
+                walk(value, f"{path}[{i}]")
+
+    sent = schema.api_schema(mode)
+    walk(sent)
+    # ...but the shape the model needs is intact.
+    assert sent["properties"]["categories"]["items"]["properties"]["key"]["enum"]
+    assert sent["additionalProperties"] is False
+    # and the counts survive as prose the model can still follow
+    assert "Exactly 3" in sent["properties"]["fix_this_first"]["description"]
+    assert "Exactly" in sent["properties"]["categories"]["description"]
