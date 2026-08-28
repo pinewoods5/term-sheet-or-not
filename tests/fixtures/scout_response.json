@@ -1,0 +1,77 @@
+{
+  "mode": "scout",
+  "headline": "The idea is fine. You're a solo non-technical founder planning to outsource it. That's the whole review.",
+  "thesis": "Restaurant staff scheduling is a real, recurring, expensive problem and you clearly know it — six years managing three locations is genuine domain depth. But you have no way to build this and no way to reach anyone outside the restaurants you personally worked at. The idea isn't the constraint here; you are, and that's fixable in a way a bad idea isn't.",
+  "categories": [
+    {
+      "key": "team_fit",
+      "score": 4,
+      "verdict": "Great domain, no way to build",
+      "reasoning": "Six years running scheduling for three locations is exactly the pain you want a founder to have felt. But 'planning to outsource' on a software product means you'll get a v1 you can't change, from people who leave the moment the invoice clears."
+    },
+    {
+      "key": "advantage",
+      "score": 5,
+      "verdict": "Real access, but it stops at thirty",
+      "reasoning": "You said you could get ten managers on a call this week, which is more than most people at this stage can honestly claim. The problem is what happens at customer thirty-one, when you're out of former colleagues and into cold outbound like everybody else."
+    },
+    {
+      "key": "idea",
+      "score": 7,
+      "verdict": "Genuinely a hair-on-fire problem",
+      "reasoning": "Scheduling around no-shows and split shifts is expensive, recurring, and currently solved with a group chat and a laminated sheet. That's a painkiller, and your description of the Sunday-night rebuild is the most convincing thing in this submission."
+    },
+    {
+      "key": "timing",
+      "score": 4,
+      "verdict": "No why-now beyond 'it annoys me'",
+      "reasoning": "You wrote that labour costs are rising, which has been true every year since forever. Nothing you've described opened recently, and this idea was equally buildable in 2019."
+    }
+  ],
+  "fix_this_first": [
+    {
+      "rank": 1,
+      "title": "Get a technical co-founder before you spend a dollar",
+      "why": "Everything else in this evaluation is downstream of this. An outsourced v1 for a product that needs weekly iteration against real shift schedules is money spent to learn nothing.",
+      "do_this": "Take the ten managers you can already call, record the Sunday-night rebuild problem in detail, and use that as the recruiting pitch. A specific painful problem with a warm customer list is a genuinely attractive offer to a good engineer."
+    },
+    {
+      "rank": 2,
+      "title": "Find the why-now or admit there isn't one",
+      "why": "Without it you're a better version of something that already exists, which is a hard sell to both customers and investors.",
+      "do_this": "Go look at what changed in restaurant labour compliance in the last eighteen months in your state. If something did, that's your wedge. If nothing did, say so and compete on being better rather than pretending to be timely."
+    },
+    {
+      "rank": 3,
+      "title": "Work out what happens past customer thirty",
+      "why": "Your access is real but finite, and finite access looks identical to no access at month nine.",
+      "do_this": "Pick one channel your customer already sits in — a regional restaurant association, a supplier's newsletter — and test whether you can get a single meeting through it before you build anything."
+    }
+  ],
+  "strategic_notes": [
+    {
+      "title": "Scheduling is the wedge, payroll is the company",
+      "note": "Nobody switches scheduling tools for fun, but everybody switches when it's attached to how they get paid. Scheduling gets you the data and the daily habit; the money is in what sits next to it. Worth knowing now, because it changes who you'd want as a technical co-founder."
+    },
+    {
+      "title": "Multi-location groups are the only viable buyer",
+      "note": "Single restaurants churn constantly and won't pay enough to cover the support they need. Your six years were at a three-location group, which is convenient — that's the buyer. Aim there from day one rather than discovering it after a year of independents."
+    }
+  ],
+  "green_flags": [
+    "Six years of felt, specific domain pain",
+    "Ten warm customer conversations available this week"
+  ],
+  "red_flags": [
+    "Solo non-technical founder planning to outsource software",
+    "No why-now argument at all",
+    "Distribution runs out at roughly thirty customers"
+  ],
+  "research_notes": [
+    {
+      "claim": "Nothing good exists for small restaurant groups",
+      "finding": "Three funded products aim at exactly this segment, though the reviews for two of them complain about precisely the split-shift handling you described.",
+      "source_url": "https://example.com/restaurant-scheduling-tools"
+    }
+  ]
+}

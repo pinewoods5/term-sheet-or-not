@@ -45,8 +45,22 @@ const state = {
 
 function go(screen, patch) {
   Object.assign(state, patch || {}, { screen });
-  render();
+  /* ---------- boot ---------- */
+
+fetch("/api/forms")
+  .then((r) => r.json())
+  .then((f) => {
+    FORMS = f;
+    render();
+  })
+  .catch(() => {
+    app.replaceChildren(
+      h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
+    );
+  });
 }
+
+let FORMS = null; // fetched from /api/forms at boot
 
 /* ---------- modes ---------- */
 
@@ -283,4 +297,16 @@ function render() {
   window.scrollTo(0, 0);
 }
 
-render();
+/* ---------- boot ---------- */
+
+fetch("/api/forms")
+  .then((r) => r.json())
+  .then((f) => {
+    FORMS = f;
+    render();
+  })
+  .catch(() => {
+    app.replaceChildren(
+      h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
+    );
+  });

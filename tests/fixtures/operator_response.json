@@ -1,0 +1,84 @@
+{
+  "mode": "operator",
+  "headline": "Real product, real churn problem: you're filling a bucket with a 9% hole in it.",
+  "thesis": "PawClaim has genuine pull — 68% week-12 retention on clinics is not nothing, and a domain founder who ran vet ops is the right person to be here. But 9% monthly logo churn against 11% MoM growth means you are running to stand still, and at $22k burn on 7 months of runway you do not have the time to out-grow it. Fix retention and this is a seed round. Don't, and the next conversation is a bridge.",
+  "categories": [
+    {
+      "key": "traction",
+      "score": 5,
+      "verdict": "Growing, but churn is eating it",
+      "reasoning": "$14k MRR at 11% MoM is a real business forming, but 9% monthly logo churn means net growth is roughly 2%. With $22k burn and 7 months of runway, you are one bad quarter from a bridge you don't want."
+    },
+    {
+      "key": "team",
+      "score": 8,
+      "verdict": "Genuinely the right two people",
+      "reasoning": "A backend engineer from Square paired with someone who ran ops at two vet chains is textbook founder-market fit, and both full-time. This is the category doing the heaviest lifting in your favour."
+    },
+    {
+      "key": "product",
+      "score": 6,
+      "verdict": "Pull exists, retention curve doesn't flatten",
+      "reasoning": "68% at week 12 is decent for vertical SaaS and NPS 41 across 30 responses is a real signal. But the curve is still sloping at week 12, which is the difference between a painkiller and a well-liked vitamin."
+    },
+    {
+      "key": "market",
+      "score": 6,
+      "verdict": "Right-sized market, moat still theoretical",
+      "reasoning": "Your bottom-up $110M is honest, which already puts you ahead of most decks. The three practice-management integrations are the beginnings of a moat, but integrations get copied — what's defensible is the claims data you'll sit on, and you didn't mention it."
+    },
+    {
+      "key": "clout",
+      "score": 4,
+      "verdict": "No owned channel, no warm capital",
+      "reasoning": "9k on X is fine and the 400k-impression launch post got you 200 signups, but that's a moment, not a channel. No warm VC intros means your raise starts cold at exactly the wrong time."
+    }
+  ],
+  "fix_this_first": [
+    {
+      "rank": 1,
+      "title": "Find out why 9% of clinics leave every month",
+      "why": "Every other number in this evaluation improves if this one moves. At 9% you replace your entire customer base in under a year, which makes CAC a subscription rather than an investment.",
+      "do_this": "Call every clinic that churned in the last 90 days this week — there are maybe fifteen. Not a survey, a call. Ask what they went back to."
+    },
+    {
+      "rank": 2,
+      "title": "Turn the launch-post audience into a channel",
+      "why": "You proved once that you can reach vet operators at scale. Doing it repeatably is cheaper than any paid channel you'd otherwise build.",
+      "do_this": "Ship one piece a week aimed at practice managers specifically — claims benchmarks from your own aggregate data is the obvious one and nobody else has it."
+    },
+    {
+      "rank": 3,
+      "title": "Start the raise conversation now, at 7 months",
+      "why": "Fundraising takes three to four months and gets measurably harder inside six months of runway, when the ask reads as a rescue rather than a round.",
+      "do_this": "Get five warm intros this month through your advisors and the vet-chain network Dana already has."
+    }
+  ],
+  "strategic_notes": [
+    {
+      "title": "The claims data is the actual company",
+      "note": "Integrations are table stakes and will be copied within a year. What compounds is the reconciliation dataset across thousands of clinics — benchmark pricing, denial rates by insurer. That is a product nobody can start from zero, and it's currently a byproduct you aren't naming."
+    },
+    {
+      "title": "Multi-location is where pricing breaks",
+      "note": "You priced for single clinics but you're selling into 2-8 location groups. At 10x scale, the buyer becomes a procurement conversation with a different sales cycle. Decide now whether you're SMB self-serve or mid-market, because the two need different companies underneath them."
+    }
+  ],
+  "green_flags": [
+    "A domain founder who actually ran the operation you're selling into",
+    "Bottom-up TAM instead of a number lifted from a report",
+    "Both founders full-time with revenue already in the door"
+  ],
+  "red_flags": [
+    "9% monthly logo churn against 11% growth is net ~2%",
+    "7 months of runway with no raise conversation started",
+    "No repeatable distribution channel, just one good launch day"
+  ],
+  "research_notes": [
+    {
+      "claim": "Two incumbents, four seed-stage startups",
+      "finding": "The seed-stage count is closer to seven, and one of them raised a $9M Series A this year aimed at exactly your 2-8 location segment.",
+      "source_url": "https://example.com/vet-software-funding"
+    }
+  ]
+}
