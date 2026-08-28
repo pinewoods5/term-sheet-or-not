@@ -32,22 +32,44 @@ chain
     );
     check("boot did not loop, fetches=" + FETCHES.length, FETCHES.length <= 6);
 
-    /* --- 2. clicking a card advances to the form --- */
-    if (cards.length) {
-      cards[0].click();
-      check("clicking a mode card renders the form", ROOT.findAll((n) => n.hasClass("field")).length > 0);
-      check(
-        "form shows step 1 of the operator flow",
-        ROOT.textContent.indexOf("The basics") !== -1
-      );
-      check("form renders a progress bar", ROOT.findAll((n) => n.hasClass("dot")).length === 5);
+    /* --- 2. the operator card is locked, the scout card never is --- */
+    check("operator card renders locked", cards[0].hasClass("locked"));
+    check("scout card is not locked", !cards[1].hasClass("locked"));
+    check("locked card explains itself", cards[0].textContent.indexOf("access key") !== -1);
+    check("tiers are labelled", ROOT.textContent.indexOf("Premium") !== -1 &&
+      ROOT.textContent.indexOf("Free") !== -1);
 
-      /* required fields empty -> next is disabled */
-      const next = ROOT.find((n) => n.attributes.id === "next-btn");
-      check("next is disabled until required fields are filled", next && next.attributes.disabled);
-    }
+    cards[0].click();
+    check("clicking the locked operator opens the key prompt",
+      ROOT.textContent.indexOf("This one needs a key") !== -1);
+    check("key prompt does not render the form",
+      ROOT.findAll((n) => n.hasClass("field")).length === 0);
 
-    /* --- 3. the results renderer survives a real payload --- */
+    /* --- 3. scout reaches its form with no key and no access call --- */
+    go("landing", {});
+    const scoutCard = ROOT.findAll((n) => n.hasClass("mode-card"))[1];
+    scoutCard.click();
+    check("scout opens its form without any key", ROOT.findAll((n) => n.hasClass("field")).length > 0);
+    check("scout form starts at its own first step",
+      ROOT.textContent.indexOf("The idea") !== -1);
+    check("scout progress bar has four steps",
+      ROOT.findAll((n) => n.hasClass("dot")).length === 4);
+    const scoutNext = ROOT.find((n) => n.attributes.id === "next-btn");
+    check("next is disabled until required fields are filled",
+      scoutNext && scoutNext.attributes.disabled);
+
+    /* --- 4. an unlocked operator behaves normally --- */
+    state.access.operator = true;
+    go("landing", {});
+    const unlocked = ROOT.findAll((n) => n.hasClass("mode-card"));
+    check("unlocked operator card loses the lock", !unlocked[0].hasClass("locked"));
+    unlocked[0].click();
+    check("unlocked operator opens its form",
+      ROOT.textContent.indexOf("The basics") !== -1);
+    check("operator progress bar has five steps",
+      ROOT.findAll((n) => n.hasClass("dot")).length === 5);
+
+    /* --- 5. the results renderer survives a real payload --- */
     go("results", { result: RESULT });
     check("results render the verdict tier", ROOT.textContent.indexOf(RESULT.tier.label) !== -1);
     check("results render the headline", ROOT.textContent.indexOf(RESULT.headline) !== -1);

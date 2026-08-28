@@ -37,7 +37,14 @@ def _fixtures() -> str:
     )
     return (
         "const FIXTURES = "
-        + json.dumps({"/api/forms": FORMS, "/api/history": []})
+        + json.dumps(
+            {
+                "/api/forms": FORMS,
+                "/api/history": [],
+                # locked by default; the smoke test unlocks in-place
+                "/api/access": {"operator": False, "available": True},
+            }
+        )
         + ";\nconst RESULT = "
         + json.dumps(result)
         + ";\n"

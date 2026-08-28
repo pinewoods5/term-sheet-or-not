@@ -43,7 +43,107 @@ const state = {
   status: null,
   error: null,
   history: [],
+  access: { operator: false, available: true },
+  keyError: null,
 };
+
+/* ---------- premium access ---------- */
+
+const KEY_STORAGE = "tsn_access_key";
+
+/* localStorage throws in some privacy modes; a missing key is just a locked
+   Operator, and must never be able to break the free Scout path. */
+function storedKey() {
+  try {
+    return localStorage.getItem(KEY_STORAGE) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function storeKey(value) {
+  try {
+    if (value) localStorage.setItem(KEY_STORAGE, value);
+    else localStorage.removeItem(KEY_STORAGE);
+  } catch (e) {
+    /* nothing to do; the key just won't persist across reloads */
+  }
+}
+
+function accessHeaders() {
+  const key = storedKey();
+  return key ? { "X-Access-Key": key } : {};
+}
+
+async function refreshAccess() {
+  try {
+    const r = await fetch("/api/access", { headers: accessHeaders() });
+    state.access = await r.json();
+  } catch (e) {
+    state.access = { operator: false, available: false };
+  }
+}
+
+async function submitKey(value) {
+  const candidate = (value || "").trim();
+  if (!candidate) return;
+  let ok = false;
+  try {
+    const r = await fetch("/api/access", { headers: { "X-Access-Key": candidate } });
+    ok = (await r.json()).operator;
+  } catch (e) {
+    ok = false;
+  }
+  if (!ok) {
+    return go("key", { keyError: "That key isn't valid, or it's been revoked." });
+  }
+  storeKey(candidate);
+  state.access.operator = true;
+  go("form", { mode: "operator", answers: {}, step: 0, keyError: null });
+}
+
+function keyScreen() {
+  let value = "";
+  return [
+    topbar("The Operator", "Premium", () => go("landing", { keyError: null })),
+    h(
+      "div",
+      { class: "keyform" },
+      h("h2", {}, "This one needs a key"),
+      h(
+        "p",
+        {},
+        "The Operator reads the live market to check your competitors, your " +
+          "timing and your TAM, which costs real money to run. The Scout is " +
+          "free and always will be."
+      ),
+      h("input", {
+        type: "text",
+        placeholder: "tsn_…",
+        autocomplete: "off",
+        spellcheck: "false",
+        "aria-label": "Access key",
+        oninput: (e) => {
+          value = e.target.value;
+        },
+        onkeydown: (e) => {
+          if (e.key === "Enter") submitKey(value);
+        },
+      }),
+      state.keyError && h("p", { class: "err" }, state.keyError),
+      h(
+        "div",
+        { class: "actions" },
+        h("button", { class: "btn", onclick: () => go("landing", { keyError: null }) }, "Back"),
+        h(
+          "button",
+          { class: "btn btn-primary", onclick: () => submitKey(value) },
+          "Unlock"
+        )
+      )
+    ),
+  ];
+}
 
 function go(screen, patch) {
   Object.assign(state, patch || {}, { screen });
@@ -87,22 +187,32 @@ function topbar(title, sub, onBack) {
 }
 
 function landing() {
-  const cards = Object.entries(MODES).map(([key, m]) =>
-    h(
+  const cards = Object.entries(MODES).map(([key, m]) => {
+    const premium = key === "operator";
+    const locked = premium && !state.access.operator;
+    return h(
       "button",
-      { class: "mode-card", onclick: () => go("form", { mode: key, answers: {}, step: 0 }) },
+      {
+        class: "mode-card" + (locked ? " locked" : ""),
+        onclick: () =>
+          locked
+            ? go("key", { keyError: null })
+            : go("form", { mode: key, answers: {}, step: 0 }),
+      },
       h(
         "div",
         { class: "who" },
         h("div", { class: "avatar" }, m.emoji),
         h("span", { class: "name" }, m.name),
         verified(),
-        h("span", { class: "at" }, "@" + m.handle)
+        h("span", { class: "at" }, "@" + m.handle),
+        h("span", { class: "tier-pill " + (premium ? "premium" : "free") }, premium ? "Premium" : "Free")
       ),
       h("p", { class: "pitch" }, m.pitch),
-      h("p", { class: "desc" }, m.desc)
-    )
-  );
+      h("p", { class: "desc" }, m.desc),
+      locked && h("p", { class: "lock-note" }, "🔒 Needs an access key — tap to enter one")
+    );
+  });
 
   return [
     topbar("Term Sheet or Not", "Two VCs. No participation trophies."),
@@ -287,11 +397,18 @@ async function submit() {
   try {
     response = await fetch("/api/evaluate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...accessHeaders() },
       body: JSON.stringify({ mode: state.mode, answers: state.answers }),
     });
   } catch (e) {
     return go("loading", { error: "Couldn't reach the server." });
+  }
+
+  if (response.status === 402 || response.status === 503) {
+    const body = await response.json().catch(() => ({}));
+    storeKey("");
+    state.access.operator = false;
+    return go("key", { keyError: body.detail || "The Operator needs an access key." });
   }
 
   if (!response.ok || !response.body) {
@@ -611,6 +728,9 @@ function render() {
     case "form":
       nodes = formScreen();
       break;
+    case "key":
+      nodes = keyScreen();
+      break;
     case "loading":
       nodes = loadingScreen();
       break;
@@ -657,7 +777,7 @@ async function boot() {
       h("p", { class: "empty" }, "Couldn't load the questions. Is the server running?")
     );
   }
-  await loadHistory();
+  await Promise.all([loadHistory(), refreshAccess()]);
   routeFromPath();
 }
 
