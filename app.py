@@ -13,11 +13,12 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import ratelimit
 import store
 from evaluator.client import MissingKey, evaluate
 from evaluator.forms import FORMS, field_keys, required_keys
@@ -36,6 +37,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store.init()
+    ratelimit.init()
     if premium is not None:
         premium.init()
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
@@ -126,6 +128,7 @@ def _sse(event: str, payload: dict) -> str:
 
 @app.post("/api/evaluate")
 def run_evaluation(
+    request: Request,
     submission: Submission,
     x_access_key: str | None = Header(default=None),
 ) -> StreamingResponse:
@@ -134,14 +137,24 @@ def run_evaluation(
 
     # The gate is checked here and only here. On the scout path nothing below
     # reads the header, imports premium, or touches the access_keys table.
+    ip = None
     if submission.mode == "operator":
         _require_operator_access(x_access_key)
+    else:
+        # Free tier: bounded, because it spends real money and asks for nothing.
+        ip = ratelimit.client_ip(request)
+        refusal = ratelimit.check(ip)
+        if refusal:
+            raise HTTPException(status_code=429, detail=refusal)
 
     allowed = field_keys(submission.mode)
     answers = {k: v for k, v in submission.answers.items() if k in allowed}
     missing = [k for k in required_keys(submission.mode) if not answers.get(k, "").strip()]
     if missing:
         raise HTTPException(status_code=400, detail=f"missing required: {', '.join(missing)}")
+
+    if ip is not None:
+        ratelimit.record(ip)
 
     def stream():
         try:

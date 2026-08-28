@@ -11,13 +11,24 @@ replies. Funny, but every joke is attached to a real point.
 whole business: traction and financials, team, product/PMF, market and moat,
 distribution and clout.
 
+**The Operator** is the premium mode and needs an access key. It runs three web
+searches per evaluation to check your competitive claim, your why-now, and your
+TAM number against the live market, and it links what it finds.
+
 **The Scout** — for an idea you haven't built yet. Judges whether the idea and
 the people behind it are worth building at all. It asks nothing about MRR, ARR,
 traction, or funding, because there isn't any and asking would tell you it
 wasn't listening.
 
-They have separate forms, separate rubrics, and separate system prompts. They
-share a voice.
+**The Scout is free and needs no key.** It also has no web access: it reasons
+from what you typed plus what it already knows, and it is built to say so rather
+than imply it checked anything. It will still catch TAM arithmetic that doesn't
+multiply, a customer described too vaguely to sell to, and contradictions
+between your own answers — which is most of what matters at idea stage. It never
+produces a URL, and the response contract rejects one if it tries.
+
+They have separate forms, separate rubrics, separate system prompts, and
+different access to the world. They share a voice.
 
 ## How the scoring works
 
@@ -84,10 +95,44 @@ uvicorn app:app --reload
 
 Then open http://localhost:8000.
 
-Each evaluation is one streamed call to `claude-opus-5` with web search enabled,
-so it takes 30–60 seconds and costs real money. The search is what lets it name
-your actual competitors instead of hand-waving about the landscape — what it
-finds shows up in the "What I found when I looked it up" section with links.
+Each evaluation is one streamed call to `claude-opus-5` and costs real money.
+Operator runs 3 web searches (~30–60s); Scout runs none (~20–40s). Search is the
+largest single line item in a run — Anthropic bills $10 per 1,000 searches on top
+of the tokens the results inject — which is why the free mode doesn't get it.
+
+## Access keys
+
+The Operator is gated. Issue a key to yourself:
+
+```
+python -m premium issue "your name"
+```
+
+The key is printed once and stored only as a SHA-256 hash. Paste it into the
+prompt behind the Operator card; the browser keeps it in `localStorage` and
+sends it as an `X-Access-Key` header.
+
+```
+python -m premium list             # who has keys, and how much they've used
+python -m premium revoke <id>      # kill one key without touching the others
+```
+
+The Scout path never reads that header, never imports the premium module, and
+never touches the keys table — so it keeps working even if the premium side is
+broken or removed entirely. There are tests that assert exactly that.
+
+## Environment variables
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | — | Required to run any evaluation. |
+| `SCOUT_RATE_LIMIT` | `5` | Free Scout runs per IP per day. `0` disables. |
+| `SCOUT_DAILY_CAP` | `200` | Free Scout runs per day in total. `0` disables. |
+| `TRUST_PROXY` | unset | Set to `1` when behind a proxy so `X-Forwarded-For` is used for rate limiting. Leave unset locally — the header is caller-supplied and spoofable when nothing sets it. |
+
+The caps apply to Scout only. The Operator is already key-gated, and letting
+free traffic exhaust a cap that then blocked a paying user would be the wrong
+failure. The limiter also fails open: if it errors, the request goes through.
 
 Results are saved to `data/app.db` (SQLite, gitignored) and get a permanent
 `/r/<id>` URL. Nothing leaves your machine except the evaluation request itself.
@@ -100,9 +145,14 @@ python -m pytest
 ```
 
 Covers the scoring arithmetic, every verdict-tier boundary from both sides, the
-variance override, the model-output contract, and the properties the prompts
-have to hold — including that nothing in the Scout rubric depends on numbers a
-pre-build founder can't have.
+variance override, the model-output contract, access keys and the gate, the free
+tier caps, and the properties the prompts have to hold — including that nothing
+in the Scout rubric depends on numbers a pre-build founder can't have, and that
+a Scout response containing a URL is rejected outright.
+
+The frontend is exercised too. There's no Node here, so `tests/frontend/` runs
+`static/app.js` against a DOM stub under macOS JavaScriptCore and asserts the
+app boots, the Operator card locks, and the Scout card never does.
 
 ## Layout
 
@@ -114,10 +164,12 @@ evaluator/
   rubric.py          weights, scoring anchors, tier logic
   schema.py          the JSON contract the model fills in, plus response validation
   result.py          assembles the payload the UI renders
-  client.py          the Claude call: web search, structured output, streaming
+  client.py          the Claude call: per-mode tools, structured output, streaming
   prompts/
     style_guide.py   the voice: persona, phrase bank, density rule, hard bans
     operator.py      Operator mandate, hard gates, research directive
     scout.py         Scout mandate, hard gates, research directive
+premium.py           access keys: issue, verify, revoke, plus a CLI
+ratelimit.py         daily caps on the free tier
 static/              hand-written frontend, no build step
 ```

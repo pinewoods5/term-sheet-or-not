@@ -412,7 +412,10 @@ async function submit() {
   }
 
   if (!response.ok || !response.body) {
-    const detail = await response.text().catch(() => "");
+    // FastAPI errors arrive as {"detail": "..."}; showing the raw JSON would be
+    // the one ugly moment in an app that otherwise talks like a person.
+    const body = await response.json().catch(() => null);
+    const detail = body && body.detail;
     return go("loading", { error: detail || "The server refused that submission." });
   }
 
