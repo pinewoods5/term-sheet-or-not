@@ -129,9 +129,9 @@ def test_defaults_match_what_the_readme_advertises(monkeypatch):
     """Keeps the documented numbers and the real ones from drifting apart."""
     for var in ("SCOUT_RATE_LIMIT", "SCOUT_DAILY_CAP"):
         monkeypatch.delenv(var, raising=False)
-    assert ratelimit.per_ip_limit() == 50
+    assert ratelimit.per_ip_limit() == 5
     assert ratelimit.global_limit() == 200
 
     readme = (Path(__file__).parent.parent / "README.md").read_text()
-    assert "| `SCOUT_RATE_LIMIT` | `50` |" in readme
+    assert "| `SCOUT_RATE_LIMIT` | `5` |" in readme
     assert "| `SCOUT_DAILY_CAP` | `200` |" in readme
